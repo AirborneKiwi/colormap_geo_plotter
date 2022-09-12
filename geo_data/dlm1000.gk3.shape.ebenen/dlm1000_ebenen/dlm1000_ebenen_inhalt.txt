@@ -1,0 +1,621 @@
+================= Inhaltsangabe Ebenendatensatz AAA - DLM1000 =============================
+
+Geodaten des Bundesamts für Kartographie und Geodäsie
+
+Objektreport erstellt am 07.02.2022 11:03:39
+
+Standardattribute in jeder Ebene:
+
+        Name        Bedeutung
+        LAND        landeskennung
+        MODELLART   modellartenkennung
+        OBJART      objektart
+        OBJART_TXT  objektartText
+        OBJID       eindeutiger Objektidentifikator
+        HDU_X       hatDirektUntenExistiert
+        BEGINN      lebenszeitintervallBeginnt
+        ENDE        lebenszeitintervallEndet
+        BEMERKUNG   Bemerkungen zum Objekt, kein offizielles AAA-Attribut
+
+
+
+--------------------------------------------------------------------------------------------
+ 1. Ebene: geb01_f
+    Geometrietyp: Fläche
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        8       75004   AX_Gebiet_Nationalstaat
+        33      75005   AX_Gebiet_Bundesland
+        19      75006   AX_Gebiet_Regierungsbezirk
+        424     75007   AX_Gebiet_Kreis
+
+
+     Attribute:
+
+        Name        Bedeutung
+        ADM         administrativeFunktion
+        BEZ_NAT     bezeichnungNationalstaat
+        BEZ_LAN     bezeichnungLand
+        BEZ_RBZ     bezeichnungRegierungsbezirk
+        BEZ_KRS     bezeichnungKreis
+        RGS         regionalsprache
+        SCH         schluessel
+        BEZ_INT     ***** Kein offizielles AAA-Attribut (DLM1000) *****
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 2. Ebene: geb01_l
+    Geometrietyp: Linie
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        1291    75009   AX_Gebietsgrenze
+
+
+     Attribute:
+
+        Name        Bedeutung
+        AGZ         artDerGebietsgrenze
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 3. Ebene: geb02_f
+    Geometrietyp: Fläche
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        727     74001   AX_Landschaft
+        172     74004   AX_Insel
+
+
+     Attribute:
+
+        Name        Bedeutung
+        LTP         landschaftstyp
+        NAM         name
+        RGS         regionalsprache
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 4. Ebene: geb03_f
+    Geometrietyp: Fläche
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        112     71006   AX_NaturUmweltOderBodenschutzrecht
+        105     71011   AX_SonstigesRecht
+        46      71012   AX_Schutzzone
+
+
+     Attribute:
+
+        Name        Bedeutung
+        OBJART_Z    Objektart ZUSO
+        OBJID_Z     Objekt-ID ZUSO
+        ADF         artDerFestlegung
+        BEZ         bezeichnung
+        NAM         name
+        SGN         nummerDesSchutzgebietes
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 5. Ebene: gew01_f
+    Geometrietyp: Fläche
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        165     44001   AX_Fliessgewaesser
+        2396    44006   AX_StehendesGewaesser
+        134     44007   AX_Meer
+
+
+     Attribute:
+
+        Name        Bedeutung
+        OBJART_Z    Objektart ZUSO
+        OBJID_Z     Objekt-ID ZUSO
+        FKT         funktion
+        GWK         gewaesserkennzahl
+        HYD         hydrologischesMerkmal
+        NAM         name
+        RGS         regionalsprache
+        SFK         schifffahrtskategorie
+        SKZ         seekennzahl
+        WDM         widmung
+        WSG         ***** Kein offizielles AAA-Attribut (DLM1000) *****
+        ZNM         zweitname
+        ZUS         zustand
+        TID         tidemerkmal
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 6. Ebene: gew01_l
+    Geometrietyp: Linie
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        40614   44004   AX_Gewaesserachse
+
+
+     Attribute:
+
+        Name        Bedeutung
+        OBJART_Z    Objektart ZUSO
+        OBJID_Z     Objekt-ID ZUSO
+        BRG         breiteDesGewaessers
+        FKT         funktion
+        FLR         fliessrichtung
+        GWK         gewaesserkennzahl
+        HYD         hydrologischesMerkmal
+        NAM         name
+        RGS         regionalsprache
+        SFK         schifffahrtskategorie
+        WDM         widmung
+        ZNM         zweitname
+        ZUS         zustand
+        TID         tidemerkmal
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 7. Ebene: gew02_f
+    Geometrietyp: Fläche
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        190     55001   AX_Gewaessermerkmal
+
+
+     Attribute:
+
+        Name        Bedeutung
+        ART         art
+        NAM         name
+        RGS         regionalsprache
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 8. Ebene: gew03_l
+    Geometrietyp: Linie
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        3859    57003   AX_Gewaesserstationierungsachse
+
+
+     Attribute:
+
+        Name        Bedeutung
+        AGA         artDerGewaesserachse
+        FLR         fliessrichtung
+        GWK         gewaesserkennzahl
+        NAM         name
+        RGS         regionalsprache
+        SFK         schifffahrtskategorie
+        ZNM         zweitname
+        TID         tidemerkmal
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 9. Ebene: rel01_l
+    Geometrietyp: Linie
+
+    Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        393     61003   AX_DammWallDeich
+        1351    61008   AX_Hoehenlinie
+        214     62030   AX_Strukturlinie3D
+
+
+     Attribute:
+
+        Name        Bedeutung
+        OBJART_Z    Objektart ZUSO
+        OBJID_Z     Objekt-ID ZUSO
+        ART         art
+        FKT         funktion
+        HHL         hoeheVonHoehenlinie
+        HHO         objekthoehe
+        NAM         name
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 10. Ebene: rel02_p
+     Geometrietyp: Punkt
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        1900    62020   AX_Punkt3D
+
+
+     Attribute:
+
+        Name        Bedeutung
+        ART         art
+        HOEHE       ***** Kein offizielles AAA-Attribut (DLM1000) *****
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 11. Ebene: sie01_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        2048    52001   AX_Ortslage
+
+
+     Attribute:
+
+        Name        Bedeutung
+        NAM         name
+        RGS         regionalsprache
+        SCH         schluessel
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 12. Ebene: sie01_p
+     Geometrietyp: Punkt
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        8740    52001   AX_Ortslage
+
+
+     Attribute:
+
+        Name        Bedeutung
+        NAM         name
+        RGS         regionalsprache
+        SCH         schluessel
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 13. Ebene: sie02_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        31      41005   AX_TagebauGrubeSteinbruch
+
+
+     Attribute:
+
+        Name        Bedeutung
+        AGT         abbaugut
+        NAM         name
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 14. Ebene: sie03_p
+     Geometrietyp: Punkt
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        2760    51002   AX_BauwerkOderAnlageFuerIndustrieUndGewerbe
+        90      51009   AX_SonstigesBauwerkOderSonstigeEinrichtung
+
+
+     Attribute:
+
+        Name        Bedeutung
+        BWF         bauwerksfunktion
+        NAM         name
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 15. Ebene: sie04_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        15      52005   AX_Testgelaende
+
+
+     Attribute:
+
+        Name        Bedeutung
+        NAM         name
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 16. Ebene: sie04_l
+     Geometrietyp: Linie
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        9       52003   AX_Schleuse
+
+
+     Attribute:
+
+        Name        Bedeutung
+        KON         konstruktionsmerkmalBauart
+        NAM         name
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 17. Ebene: sie04_p
+     Geometrietyp: Punkt
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        490     52003   AX_Schleuse
+
+
+     Attribute:
+
+        Name        Bedeutung
+        KON         konstruktionsmerkmalBauart
+        NAM         name
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 18. Ebene: sie05_p
+     Geometrietyp: Punkt
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        2159    31001   AX_Gebaeude
+        584     51001   AX_Turm
+
+
+     Attribute:
+
+        Name        Bedeutung
+        BWF         bauwerksfunktion
+        GFK         gebaeudefunktion
+        HHO         objekthoehe
+        NAM         name
+        ZNM         zweitname
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 19. Ebene: veg01_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        551     43001   AX_Landwirtschaft
+
+
+     Attribute:
+
+        Name        Bedeutung
+        NAM         name
+        VEG         vegetationsmerkmal
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 20. Ebene: veg02_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        4304    43002   AX_Wald
+
+
+     Attribute:
+
+        Name        Bedeutung
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 21. Ebene: veg03_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        187     43004   AX_Heide
+        163     43005   AX_Moor
+        55      43006   AX_Sumpf
+        82      43007   AX_UnlandVegetationsloseFlaeche
+
+
+     Attribute:
+
+        Name        Bedeutung
+        FKT         funktion
+        NAM         name
+        OFM         oberflaechenmaterial
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 22. Ebene: veg04_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        227     54001   AX_Vegetationsmerkmal
+
+
+     Attribute:
+
+        Name        Bedeutung
+        NAM         name
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 23. Ebene: ver01_l
+     Geometrietyp: Linie
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        76374   42003   AX_Strassenachse
+
+
+     Attribute:
+
+        Name        Bedeutung
+        OBJART_Z    Objektart ZUSO
+        OBJID_Z     Objekt-ID ZUSO
+        BEZ         bezeichnung
+        FSZ         anzahlDerFahrstreifen
+        FTR         fahrbahntrennung
+        IBD         internationaleBedeutung
+        WDM         widmung
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 24. Ebene: ver03_l
+     Geometrietyp: Linie
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        18019   42014   AX_Bahnstrecke
+        73      53005   AX_SeilbahnSchwebebahn
+
+
+     Attribute:
+
+        Name        Bedeutung
+        BKT         bahnkategorie
+        ELK         elektrifizierung
+        GLS         anzahlDerStreckengleise
+        NAM         name
+        NRB         nummerDerBahnstrecke
+        SPW         spurweite
+        VKD         ***** Kein offizielles AAA-Attribut (DLM1000) *****
+        ZNM         zweitname
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 25. Ebene: ver04_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        39      42015   AX_Flugverkehr
+
+
+     Attribute:
+
+        Name        Bedeutung
+        ART         art
+        BEZ         bezeichnung
+        NAM         name
+        NTZ         nutzung
+        ZNM         zweitname
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 26. Ebene: ver05_l
+     Geometrietyp: Linie
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        156     57002   AX_SchifffahrtslinieFaehrverkehr
+
+
+     Attribute:
+
+        Name        Bedeutung
+        ART         art
+        NAM         name
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 27. Ebene: ver06_f
+     Geometrietyp: Fläche
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        12      53009   AX_BauwerkImGewaesserbereich
+
+
+     Attribute:
+
+        Name        Bedeutung
+        BWF         bauwerksfunktion
+        NAM         name
+        RGS         regionalsprache
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 28. Ebene: ver06_l
+     Geometrietyp: Linie
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        15307   53001   AX_BauwerkImVerkehrsbereich
+        73      53007   AX_Flugverkehrsanlage
+        1632    53009   AX_BauwerkImGewaesserbereich
+
+
+     Attribute:
+
+        Name        Bedeutung
+        ART         art
+        BEZ         bezeichnung
+        BWF         bauwerksfunktion
+        NAM         name
+        RGS         regionalsprache
+        ZNM         zweitname
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
+
+--------------------------------------------------------------------------------------------
+ 29. Ebene: ver06_p
+     Geometrietyp: Punkt
+
+     Objektarten:
+
+        Anzahl  OBJART  Bedeutung
+        5512    53002   AX_Strassenverkehrsanlage
+        7251    53004   AX_Bahnverkehrsanlage
+        703     53007   AX_Flugverkehrsanlage
+        285     53009   AX_BauwerkImGewaesserbereich
+
+
+     Attribute:
+
+        Name        Bedeutung
+        ART         art
+        BEZ         bezeichnung
+        BFK         bahnhofskategorie
+        BKT         bahnkategorie
+        BWF         bauwerksfunktion
+        NAM         name
+        RGS         regionalsprache
+        VKD         ***** Kein offizielles AAA-Attribut (DLM1000) *****
+        ZNM         zweitname
+        ZUS         zustand
+        SYMBOLNR    ***** Kein offizielles AAA-Attribut (DLM1000) *****
