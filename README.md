@@ -27,4 +27,4 @@ Arguments:
         Default "RdYlGn". The matplotlib colormap of your choice.
         You can reverse a colormap, by adding a '_r' suffix to a cmap.
 
-![](output\ExampleData_0.png)
+![](output/ExampleData_0.png)
