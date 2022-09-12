@@ -223,26 +223,6 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
         plt.savefig(f'{save_to}.{format}', format=format, bbox_inches='tight', dpi=600)
     return fig, ax
 
-
-def convert_svg_to_pdf(filename: str) -> None:
-    print(f'Converting SVG {filename} to PDF format')
-    if filename.endswith('.svg'):
-        filename = filename[:filename.rfind('.')]
-
-    drawing = svg2rlg(f'{filename}.svg')
-
-    renderPDF.drawToFile(drawing, f'{filename}.pdf')
-
-
-def render_pdf_to_png(filename) -> None:
-    print(f'Rendering PDF {filename} to PNG format')
-    if filename.endswith('.pdf'):
-        filename = filename[:filename.rfind('.')]
-
-    pages = convert_from_path(f'{filename}.pdf', 600)
-    pages[0].save(f'{filename}.png', 'PNG')
-
-
 def process_data(filename: str, **kwargs) -> None:
     df = pd.read_csv(filename)
     print('The following data has been read:')
