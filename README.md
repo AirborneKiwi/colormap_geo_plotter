@@ -27,4 +27,4 @@ Arguments:
         Default "RdYlGn". The matplotlib colormap of your choice.
         You can reverse a colormap, by adding a '_r' suffix to a cmap.
 
-<img height="1000" src="C:\Users\fellerer\Documents\energy\Projekt\2022-06_H2-EMN\colormap_geo_plotter\output\ExampleData_0.png" width="1000"/>
+![](output\ExampleData_0.png)
