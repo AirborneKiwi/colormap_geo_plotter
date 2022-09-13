@@ -42,10 +42,21 @@ from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPDF
 from pdf2image import convert_from_path
 
+def save_figure(fig:plt.Figure, filename:str, format:str = 'png') -> None:
+    # Create the output folder, if it does not exist
+    path = filename[:filename.rfind('/')]
+    if path:
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            pass
+
+    print(f'Saving to {filename}.{format}')
+    fig.savefig(f'{filename}.{format}', format=format, bbox_inches='tight', dpi=600)
 
 def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: str = 'RdYlGn',
                   text_alpha: float = 0.5, label_counties: bool = True, crop: bool = True, add_roads: bool = False,
-                  use_cx: bool = False, save_to: str = '', format: str = 'svg') -> (plt.Figure, plt.Axes):
+                  use_cx: bool = False, save_to: str = '', format: str = 'svg', vmin=None, vmax=None, fig=None, ax=None, zoom=1) -> (plt.Figure, plt.Axes):
     if use_cx:
         import contextily as cx
 
@@ -154,23 +165,33 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
     geo_data_krs['has_data'] = geo_data_krs['value'].notna()
 
     geo_data_krs['centroids'] = geo_data_krs.centroid
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(15, 15))
 
-    fig, ax = plt.subplots(figsize=(15, 15))
     ax.set_axis_off()
-    plt.title(title, pad=30)
+    ax.set_title(title, y=1.05, fontdict={'fontweight':'bold'})
 
     '''Plot the data'''
-    ax = geo_data_krs[geo_data_krs['has_data']].plot(ax=ax, column='value', linewidth=0, zorder=3, legend=True,
-                                                     cmap=cmap, legend_kwds={'label': title_axis, 'shrink': 0.835})
+    if vmin is None:
+        vmin = geo_data_krs[geo_data_krs['has_data']].min().min()
+    if vmax is None:
+        vmax = geo_data_krs[geo_data_krs['has_data']].max().max()
+
+    ax = geo_data_krs[geo_data_krs['has_data']].plot(ax=ax, column='value', linewidth=0, zorder=3, legend=False, vmin=vmin, vmax=vmax, cmap=cmap)
+
+    cax = fig.add_axes([1, 0.1, 0.03, 0.8])
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+    sm._A = []
+    cbr = fig.colorbar(sm, cax=cax, label=title_axis)
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
 
     '''Border plotting'''
     # ax = geo_data_vwg.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=0.1, zorder=4)
-    ax = geo_data_krs.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=0.2, zorder=5)
-    ax = geo_data_lan.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=1, zorder=6)
-    ax = geo_data_sta.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=3, zorder=7)
+    ax = geo_data_krs.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=zoom*0.2, zorder=5)
+    ax = geo_data_lan.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=zoom*1, zorder=6)
+    ax = geo_data_sta.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=zoom*3, zorder=7)
 
     '''Road plotting'''
     if add_roads:
@@ -199,39 +220,75 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
             for x, y, label in zip(geo_data_counties['geometry'].x, geo_data_counties['geometry'].y,
                                    geo_data_counties['GEN']):
                 ax.annotate(f'LK {label}', xy=(x, y), xytext=(0, 0), textcoords="offset points", va='center',
-                            ha='center', size=6, alpha=text_alpha, zorder=20)
+                            ha='center', size=zoom*6, alpha=text_alpha, zorder=20)
 
         geo_data_cities = geo_data_krs[(geo_data_krs['BEZ'] == 'Kreisfreie Stadt')]
         geo_data_cities = geo_data_cities.drop('geometry', axis=1).rename(columns={'centroids': 'geometry'})
 
-        ax = geo_data_cities.plot(ax=ax, color='black', markersize=5, zorder=12)
+        ax = geo_data_cities.plot(ax=ax, color='black', markersize=zoom*5, zorder=12)
         for x, y, label in zip(geo_data_cities['geometry'].x, geo_data_cities['geometry'].y, geo_data_cities['GEN']):
-            ax.annotate(label, xy=(x, y), xytext=(3, 3), textcoords="offset points", size=10, alpha=text_alpha,
+            ax.annotate(label, xy=(x, y), xytext=(3, 3), textcoords="offset points", size=zoom*10, alpha=text_alpha,
                         fontweight='bold', zorder=21)
 
     if save_to is not None:
         # Create the output folder, if it does not exist
         save_to.replace('\\', '/')
-        path = save_to[:save_to.rfind('/')]
-        if path:
-            try:
-                os.mkdir(path)
-            except FileExistsError:
-                pass
-
-        print(f'Saving to {save_to}.{format}')
-        plt.savefig(f'{save_to}.{format}', format=format, bbox_inches='tight', dpi=600)
+        save_figure(fig, save_to, format)
     return fig, ax
 
-def process_data(df: pd.DataFrame, **kwargs) -> None:
+
+
+def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str='', **kwargs) -> None:
+    vmin = df.min().min()
+    vmax = df.max().max()
+    individual_files = True
+    fig=None
+    ax=None
+
+    if n_rows != 1 or n_cols != 1:
+        if len(df) != n_rows*n_cols:
+            raise Exception(f'The dimensions of the subplots of {n_rows}x{n_cols} have been passed, but there are {len(df)} rows in the data!')
+        individual_files = False
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 15))
+
+
     for index, row in df.iterrows():
+        if not individual_files:
+            ax = axes.flatten()[index]
+
         tmp = pd.DataFrame(row)
         tmp = tmp.rename(columns={index: 'value'})
         args = kwargs.copy()
-        args['title'] = f'{kwargs["title"]} - {index}'
-        if args['save_to'] is not None:
-            args['save_to'] = f'{kwargs["save_to"]}_{index}'
-        plot_geo_data(tmp, **args)
+        if isinstance(args['title'], str):
+            args['title'] = f'{kwargs["title"]} - {index}'
+        else:
+            try:
+                args['title'] = args['title'][index]
+            except IndexError:
+                raise IndexError('The title can be a str or an iterable of the same size as there are number or rows.')
+
+        if individual_files and args['save_to'] is not None:
+            if isinstance(args['save_to'], str):
+                args['save_to'] = f'{kwargs["save_to"]}_{index}'
+            else:
+                try:
+                    args['save_to'] = args['save_to'][index]
+                except IndexError:
+                    raise IndexError(
+                        'The filename for the output (save_to) can be a str or an iterable of the same size as there are number or rows.')
+        else:
+            args['save_to'] = None
+
+        plot_geo_data(tmp, fig=fig, ax=ax, vmin=vmin, vmax=vmax, zoom=zoom, **args)
+
+    if figure_title:
+        fig.suptitle(figure_title, y=0.95, fontweight='bold', fontsize=16)
+
+    if not individual_files and kwargs['save_to'] is not None:
+        save_figure(fig, kwargs['save_to'], kwargs['format'])
+
+    return fig, axes
 
 def process_file(filename: str, **kwargs) -> None:
     df = pd.read_csv(filename)
