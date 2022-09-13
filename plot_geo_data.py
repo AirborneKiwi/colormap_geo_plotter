@@ -209,7 +209,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
             ax.annotate(label, xy=(x, y), xytext=(3, 3), textcoords="offset points", size=10, alpha=text_alpha,
                         fontweight='bold', zorder=21)
 
-    if save_to:
+    if save_to is not None:
         # Create the output folder, if it does not exist
         save_to.replace('\\', '/')
         path = save_to[:save_to.rfind('/')]
@@ -223,19 +223,21 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
         plt.savefig(f'{save_to}.{format}', format=format, bbox_inches='tight', dpi=600)
     return fig, ax
 
-def process_data(filename: str, **kwargs) -> None:
-    df = pd.read_csv(filename)
-    print('The following data has been read:')
-    print(df)
-
+def process_data(df: pd.DataFrame, **kwargs) -> None:
     for index, row in df.iterrows():
         tmp = pd.DataFrame(row)
         tmp = tmp.rename(columns={index: 'value'})
         args = kwargs.copy()
         args['title'] = f'{kwargs["title"]} - {index}'
-        args['save_to'] = f'{kwargs["save_to"]}_{index}'
+        if args['save_to'] is not None:
+            args['save_to'] = f'{kwargs["save_to"]}_{index}'
         plot_geo_data(tmp, **args)
 
+def process_file(filename: str, **kwargs) -> None:
+    df = pd.read_csv(filename)
+    print('The following data has been read:')
+    print(df)
+    process_data(df, **kwargs)
 
 def main(argv):
     _args = dict(
