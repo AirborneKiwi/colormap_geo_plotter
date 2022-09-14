@@ -228,7 +228,9 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
         ax = data_df[data_df['has_data']].plot(ax=ax, facecolor="none", edgecolor="none", zorder=3)
         point_data = data_df[data_df['has_data']].drop(columns=['geometry']).rename(columns={'centroids': 'geometry'})
 
-        if len(point_data['value'].unique()) > 1:
+        all_numeric = all(point_data['value'].apply(lambda v: isinstance(v, int) or isinstance(v, float)))
+
+        if all_numeric and len(point_data['value'].unique()) > 1:
             point_data['scaled_value'] = (point_data['value'] - point_data['value'].min()) / (point_data['value'].max() - point_data['value'].min())
 
             # make sure smaller circles are plotted on top
@@ -243,7 +245,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
 
         ax = point_data.plot(ax=ax, column='value', edgecolor="black", linewidth=zoom*1,
                              markersize=zoom*point_data['markersize'],
-                             zorder=18, cmap=cmap)
+                             zorder=18, cmap=cmap, legend = ~all_numeric)
 
         if 'label' in point_data:
             for x, y, label in zip(point_data['geometry'].x, point_data['geometry'].y, point_data['label']):
