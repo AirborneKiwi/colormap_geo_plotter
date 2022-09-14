@@ -60,6 +60,16 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
     if use_cx:
         import contextily as cx
 
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=(15, 15))
+
+    ax.set_axis_off()
+
+    if all(data['value'].isna()):
+        print('No data to plot found')
+        return fig, ax
+
     data_copy = data
 
     marking = ''
@@ -165,10 +175,9 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
     geo_data_krs['has_data'] = geo_data_krs['value'].notna()
 
     geo_data_krs['centroids'] = geo_data_krs.centroid
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(15, 15))
 
-    ax.set_axis_off()
+
+
     ax.set_title(title, y=1.05, fontdict={'fontweight':'bold'})
 
     '''Plot the data'''
@@ -179,10 +188,11 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
 
     ax = geo_data_krs[geo_data_krs['has_data']].plot(ax=ax, column='value', linewidth=0, zorder=3, legend=False, vmin=vmin, vmax=vmax, cmap=cmap)
 
-    cax = fig.add_axes([1, 0.1, 0.03, 0.8])
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
-    sm._A = []
-    cbr = fig.colorbar(sm, cax=cax, label=title_axis)
+    if own_fig:
+        cax = fig.add_axes([1, 0.1, 0.03, 0.8])
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+        sm._A = []
+        cbr = fig.colorbar(sm, cax=cax, label=title_axis)
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
@@ -279,12 +289,73 @@ def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str=
                         'The filename for the output (save_to) can be a str or an iterable of the same size as there are number or rows.')
         else:
             args['save_to'] = None
-
         plot_geo_data(tmp, fig=fig, ax=ax, vmin=vmin, vmax=vmax, zoom=zoom, **args)
 
+
+    axes_pos = np.around(np.array([ax.get_position().get_points().flatten() for ax in fig.axes if ax.has_data()]).transpose(), decimals=10)
+
+    # Get the height and width of axes with data
+    ax_width = axes_pos[2][0] - axes_pos[0][0]
+    ax_height = axes_pos[3][0] - axes_pos[1][0]
+
+    y0_rows = np.unique(axes_pos[1])
+    x0_cols = np.unique(axes_pos[0])
+
+    # rescale and reposition all empty axes
+    for ax in fig.axes:
+        if not ax.has_data():
+            ax_pos = ax.get_position()
+            ax_pos.x0 = x0_cols[np.absolute(x0_cols - ax_pos.x0).argmin()]
+            ax_pos.y0 = y0_rows[np.absolute(y0_rows - ax_pos.y0).argmin()]
+            ax_pos.x1 = ax_pos.x0 + ax_width
+            ax_pos.y1 = ax_pos.y0 + ax_height
+            ax.set_position(ax_pos)
+
+
+    # Compute the gap between the rightmost axes and the colorbar
+    x_gap_width_min = 0.025
+    x1_max = axes_pos[2].max()
+    x0_min = axes_pos[0].min()
+
+    x_gap_width = max(x_gap_width_min, (x1_max - x0_min)/len(x0_cols) - ax_width)
+
+
+    # Reposition all subplots vertically
+    max_y1 = 0.95
+    if figure_title:
+        max_y1 -= 0.05  # leave some space for the title
+
+    y_gap_width = 0.025
+    if 'title_axis' in kwargs:
+        y_gap_width += 0.01  # leave some extra space for the axis title
+
+    for ax in fig.axes:
+        ax_col = np.absolute(x0_cols - ax.get_position().x0).argmin()
+        ax_row = np.absolute(y0_rows - ax.get_position().y0).argmin()
+        ax_pos = ax.get_position()
+        ax_pos.x0 = x0_min + ax_col*(ax_width + x_gap_width)
+        ax_pos.x1 = ax_pos.x0 + ax_width
+
+        ax_pos.y1 = max_y1 - (n_rows-ax_row-1)*(ax_height + y_gap_width)
+        ax_pos.y0 = ax_pos.y1 - ax_height
+        ax.set_position(ax_pos)
+
+
+    # add the colorbar
+    x0_colorbar = x1_max
+    y0_colorbar = max_y1 - (n_rows*(ax_height + y_gap_width) - y_gap_width)
+    y1_colorbar = (n_rows*(ax_height + y_gap_width) - y_gap_width)
+
+    cax = fig.add_axes([x0_colorbar, y0_colorbar, 0.03, y1_colorbar])
+    sm = plt.cm.ScalarMappable(cmap=kwargs['cmap'], norm=plt.Normalize(vmin=vmin, vmax=vmax))
+    sm._A = []
+    cbr = fig.colorbar(sm, cax=cax, label=kwargs['title_axis'])
+
+    # add the figure title
     if figure_title:
         fig.suptitle(figure_title, y=0.95, fontweight='bold', fontsize=16)
 
+    # save to a file
     if not individual_files and kwargs['save_to'] is not None:
         save_figure(fig, kwargs['save_to'], kwargs['format'])
 
