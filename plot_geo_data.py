@@ -36,6 +36,9 @@ import numpy as np
 import regex as re
 import matplotlib.pyplot as plt
 import geopandas as gpd
+from shapely.geometry import Point, Polygon
+from shapely.ops import transform
+import pyproj
 
 # Some libraries to render the svg to PDF and afterwards to PNG
 from svglib.svglib import svg2rlg
@@ -54,9 +57,19 @@ def save_figure(fig:plt.Figure, filename:str, format:str = 'png') -> None:
     print(f'Saving to {filename}.{format}')
     fig.savefig(f'{filename}.{format}', format=format, bbox_inches='tight', dpi=600)
 
-def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: str = 'RdYlGn',
-                  text_alpha: float = 0.5, label_counties: bool = True, crop: bool = True, add_roads: bool = False,
-                  use_cx: bool = False, save_to: str = '', format: str = 'svg', vmin=None, vmax=None, fig=None, ax=None, zoom=1) -> (plt.Figure, plt.Axes):
+def create_coordinate(longitude:float, latitude:float) -> Point:
+    return gpd.points_from_xy([longitude], [latitude], crs='EPSG:4326')[0]
+
+def create_bounding_box_from_lon_lat(sw_lon:float, sw_lat:float, ne_lon:float, ne_lat:float) -> Polygon:
+    return create_bounding_box(create_coordinate(sw_lon, sw_lat), create_coordinate(ne_lon, ne_lat))
+
+def create_bounding_box(sw_point:Point, ne_point:Point) -> Polygon:
+    return Polygon([(sw_point.x, sw_point.y), (ne_point.x, sw_point.y), (ne_point.x, ne_point.y), (sw_point.x, ne_point.y), (sw_point.x, sw_point.y)])
+
+def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', title: str = '', cmap: str = 'RdYlGn',
+                  text_alpha: float = 0.5, label_counties: bool = True, crop: object = 'data', add_roads: bool = False,
+                  use_cx: bool = False, save_to: str = '', format: str = 'svg', vmin=None, vmax=None, fig=None, ax=None,
+                  zoom=1, **kwargs) -> (plt.Figure, plt.Axes):
     if use_cx:
         import contextily as cx
 
@@ -66,43 +79,18 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
 
     ax.set_axis_off()
 
+    data_copy = data
+    coord_specified = 'lat' in data_copy and 'lon' in data_copy
+    if coord_specified and 'value' not in data_copy:
+        data_copy['value'] = 1
+
     if all(data['value'].isna()):
         print('No data to plot found')
         return fig, ax
 
-    data_copy = data
+    ax.set_title(title, y=1.05, fontdict={'fontweight': 'bold'})
 
-    marking = ''
-
-    def is_county_marked(name):
-        return re.match(r'.*\bLK\b.*', name) or re.match(r'.*\bLandkreis\b.*', name) or \
-               re.match(r'.*\bKreis\b.*', name) or re.match(r'.*\bK\b.*', name)
-
-    def is_city_marked(name):
-        return re.match(r'.*\bStadt\b.*', name) or re.match(r'.*\bKreisstadt\b.*', name)
-
-    for name in data_copy.index:
-        if is_county_marked(name):
-            marking = 'County'
-            break
-
-        if is_city_marked(name):
-            marking = 'City'
-            break
-
-    if not marking:
-        raise Exception('Please either use names with "LK " or cities with "Stadt " to distinguish them.')
-
-    def get_type(name, marking):
-        if marking == 'County':
-            return 'County' if is_county_marked(name) else 'City'
-
-        return 'City' if is_city_marked(name) else 'County'
-
-    # data_copy['area_type'] = data_copy['name'].apply(lambda s: get_type(s, marking))
-    data_copy['area_type'] = [get_type(name, marking) for name in
-                              data_copy.index]  # data_copy['name'].apply(lambda s: get_type(s, marking))
-
+    '''Load the shape files'''
     if add_roads:
         geo_data_roads = gpd.read_file('geo_data/dlm1000.gk3.shape.ebenen/dlm1000_ebenen/ver01_l.shp').to_crs(epsg=3857)
         geo_data_roads = geo_data_roads[(geo_data_roads['BEZ'].str.contains('A').fillna(False)) | (
@@ -114,88 +102,176 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
         epsg=3857)
     geo_data_krs = gpd.read_file('geo_data/vg5000_01-01.gk3.shape.ebenen/vg5000_ebenen_0101/VG5000_KRS.shp').to_crs(
         epsg=3857)
-
-    def match_to_krs(s):
-        def get_name_matches(s_krs, name, area_type):
-            name_parts = name.split(' ')
-            score = 0
-
-            # if area_type == 'County' and s_krs['BEZ']!='Landkreis' and s_krs['BEZ']!='Kreis':
-            #    score -= 0.25
-
-            # if area_type == 'City' and (s_krs['BEZ']=='Landkreis' or s_krs['BEZ']=='Kreis'):
-            #    score -= 0.25
-
-            d_score = 2
-
-            for name_part in name_parts:
-                if name_part in ['Landkreis', 'LK', 'Kreis', '(Landkreis)', '(LK)', '(Kreis)']:
-                    continue
-
-                d_score *= 0.5
-                if re.match(fr'.*\b{name_part}\b.*', s_krs['GEN']):
-                    score += d_score
-                    continue
-
-                if re.match(fr'.*\b{name_part}.*', s_krs['GEN']):
-                    score += d_score
-                    continue
-
-            return score
-
-        area_type = s['area_type']
-        name = s.name
-
-        geo_data_krs['score'] = geo_data_krs.apply(lambda s_krs: get_name_matches(s_krs, name, area_type), axis=1)
-
-        match = geo_data_krs[(geo_data_krs['score'] > 0) & (geo_data_krs['score'] == geo_data_krs['score'].max())]
-
-        if len(match) == 0:
-            return np.nan
-
-        if len(match) > 1:  # multiple matches found. Try to distinguish using the area type
-            if area_type == 'County':
-                match = match[(match['BEZ'] == 'Landkreis') | (match['BEZ'] == 'Kreis')]
-
-            if area_type == 'City':
-                match = match[(match['BEZ'] != 'Landkreis') & (match['BEZ'] != 'Kreis')]
-
-            if len(match) > 1:
-                raise Exception(
-                    f'No clear match for {area_type} "{name}" found. Conflicting entries are {list(zip(match["GEN"].values, match["BEZ"].values))}')
-
-        return match.index[0]
-
-    data_copy.index = data_copy.apply(match_to_krs, axis=1)
-
-    geo_data_krs = geo_data_krs.join(data_copy, rsuffix='_data')
-
-    geo_data_krs = geo_data_krs.drop(['area_type', 'score'], axis=1)
-
-    geo_data_krs['has_data'] = geo_data_krs['value'].notna()
-
     geo_data_krs['centroids'] = geo_data_krs.centroid
 
+    '''Create the plottable DataFrame with the data'''
+
+    data_df = None
+    if not coord_specified:
+        '''Try to find matching counties in geo_data_krs for each column header'''
+        marking = ''
+        def is_county_marked(name):
+            return re.match(r'.*\bLK\b.*', name) or re.match(r'.*\bLandkreis\b.*', name) or \
+                   re.match(r'.*\bKreis\b.*', name) or re.match(r'.*\bK\b.*', name)
+
+        def is_city_marked(name):
+            return re.match(r'.*\bStadt\b.*', name) or re.match(r'.*\bKreisstadt\b.*', name)
+
+        for name in data_copy.index:
+            if is_county_marked(name):
+                marking = 'County'
+                break
+
+            if is_city_marked(name):
+                marking = 'City'
+                break
+
+        if not marking:
+            raise Exception('Please either use names with "LK " or cities with "Stadt " to distinguish them.')
+
+        def get_type(name, marking):
+            if marking == 'County':
+                return 'County' if is_county_marked(name) else 'City'
+
+            return 'City' if is_city_marked(name) else 'County'
+
+        # data_copy['area_type'] = data_copy['name'].apply(lambda s: get_type(s, marking))
+        data_copy['area_type'] = [get_type(name, marking) for name in
+                                  data_copy.index]  # data_copy['name'].apply(lambda s: get_type(s, marking))
 
 
-    ax.set_title(title, y=1.05, fontdict={'fontweight':'bold'})
+        def match_to_krs(s):
+            def get_name_matches(s_krs, name, area_type):
+                name_parts = name.split(' ')
+                score = 0
+
+                # if area_type == 'County' and s_krs['BEZ']!='Landkreis' and s_krs['BEZ']!='Kreis':
+                #    score -= 0.25
+
+                # if area_type == 'City' and (s_krs['BEZ']=='Landkreis' or s_krs['BEZ']=='Kreis'):
+                #    score -= 0.25
+
+                d_score = 2
+
+                for name_part in name_parts:
+                    if name_part in ['Landkreis', 'LK', 'Kreis', '(Landkreis)', '(LK)', '(Kreis)']:
+                        continue
+
+                    d_score *= 0.5
+                    if re.match(fr'.*\b{name_part}\b.*', s_krs['GEN']):
+                        score += d_score
+                        continue
+
+                    if re.match(fr'.*\b{name_part}.*', s_krs['GEN']):
+                        score += d_score
+                        continue
+
+                return score
+
+            area_type = s['area_type']
+            name = s.name
+
+            geo_data_krs['score'] = geo_data_krs.apply(lambda s_krs: get_name_matches(s_krs, name, area_type), axis=1)
+
+            match = geo_data_krs[(geo_data_krs['score'] > 0) & (geo_data_krs['score'] == geo_data_krs['score'].max())]
+
+            if len(match) == 0:
+                return np.nan
+
+            if len(match) > 1:  # multiple matches found. Try to distinguish using the area type
+                if area_type == 'County':
+                    match = match[(match['BEZ'] == 'Landkreis') | (match['BEZ'] == 'Kreis')]
+
+                if area_type == 'City':
+                    match = match[(match['BEZ'] != 'Landkreis') & (match['BEZ'] != 'Kreis')]
+
+                if len(match) > 1:
+                    raise Exception(
+                        f'No clear match for {area_type} "{name}" found. Conflicting entries are {list(zip(match["GEN"].values, match["BEZ"].values))}')
+
+            return match.index[0]
+
+        data_copy.index = data_copy.apply(match_to_krs, axis=1)
+
+        data_df = geo_data_krs.join(data_copy, rsuffix='_data')
+
+        data_df = data_df.drop(['area_type', 'score'], axis=1)
+    else:
+        '''Extract latitude and longitude and create geopandas frame'''
+        data_viz = 'circle'
+        data_df = gpd.GeoDataFrame(data_copy, geometry=gpd.points_from_xy(data_copy['lon'], data_copy['lat'],
+                                                                          crs='EPSG:4326')).to_crs(epsg=3857)
+
+        display(data_df)
+
+    data_df['has_data'] = data_df['value'].notna()
+    data_df['centroids'] = data_df.centroid
 
     '''Plot the data'''
     if vmin is None:
-        vmin = geo_data_krs[geo_data_krs['has_data']].min().min()
+        if not coord_specified:
+            vmin = data_df[data_df['has_data']].min().min()
+        else:
+            vmin = data_df[data_df['has_data']]['value'].min()
     if vmax is None:
-        vmax = geo_data_krs[geo_data_krs['has_data']].max().max()
+        if not coord_specified:
+            vmax = data_df[data_df['has_data']].max().max()
+        else:
+            vmax = data_df[data_df['has_data']]['value'].max()
 
-    ax = geo_data_krs[geo_data_krs['has_data']].plot(ax=ax, column='value', linewidth=0, zorder=3, legend=False, vmin=vmin, vmax=vmax, cmap=cmap)
+    add_colorbar = own_fig
 
-    if own_fig:
+    if data_viz == 'area':
+        ax = data_df[data_df['has_data']].plot(ax=ax, column='value', linewidth=0, zorder=3, legend=False,
+                                                         vmin=vmin, vmax=vmax, cmap=cmap)
+    elif data_viz == 'circle':
+        ax = data_df[data_df['has_data']].plot(ax=ax, facecolor="none", edgecolor="none", zorder=3)
+        point_data = data_df[data_df['has_data']].drop(columns=['geometry']).rename(columns={'centroids': 'geometry'})
+
+        if len(point_data['value'].unique()) > 1:
+            point_data['scaled_value'] = (point_data['value'] - point_data['value'].min()) / (point_data['value'].max() - point_data['value'].min())
+
+            # make sure smaller circles are plotted on top
+            point_data = point_data.sort_values(by='scaled_value', ascending=0)
+
+            markersize_min = kwargs['markersize_min'] if 'markersize_min' in kwargs else 100
+            markersize_max = kwargs['markersize_max'] if 'markersize_min' in kwargs else 5000
+            point_data['markersize'] = markersize_min+(markersize_max-markersize_min)*point_data['scaled_value']
+        else:
+            point_data['markersize'] = kwargs['markersize'] if 'markersize' in kwargs else 100
+            add_colorbar = False
+
+        ax = point_data.plot(ax=ax, column='value', edgecolor="black", linewidth=zoom*1,
+                             markersize=zoom*point_data['markersize'],
+                             zorder=18, cmap=cmap)
+
+        if 'label' in point_data:
+            for x, y, label in zip(point_data['geometry'].x, point_data['geometry'].y, point_data['label']):
+                ax.annotate(label, xy=(x, y), xytext=(3, 3), textcoords="offset points", size=zoom*6, alpha=text_alpha, zorder=20)
+        pass
+
+    if own_fig and add_colorbar:
         cax = fig.add_axes([1, 0.1, 0.03, 0.8])
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
         sm._A = []
         cbr = fig.colorbar(sm, cax=cax, label=title_axis)
 
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
+    xlim = None
+    ylim = None
+    if crop == 'data' or crop==True:
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+    elif isinstance(crop, Polygon):
+        '''A bounding box has been passed'''
+        wgs84 = pyproj.CRS('EPSG:4326')
+        pseudo_mercator = pyproj.CRS('EPSG:3857')
+
+        project = pyproj.Transformer.from_crs(wgs84, pseudo_mercator, always_xy=True).transform
+        crop = transform(project, crop)
+
+        minx, miny, maxx, maxy = crop.bounds
+        xlim = (minx, maxx)
+        ylim = (miny, maxy)
 
     '''Border plotting'''
     # ax = geo_data_vwg.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=0.1, zorder=4)
@@ -215,7 +291,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
         ax = geo_data_roads[geo_data_roads['BEZ'].str.contains('A')].plot(ax=ax, edgecolor="black", linewidth=3.5,
                                                                           zorder=14)
 
-    if crop:
+    if xlim is not None:
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
 
@@ -240,7 +316,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, title: str = '', cmap: st
             ax.annotate(label, xy=(x, y), xytext=(3, 3), textcoords="offset points", size=zoom*10, alpha=text_alpha,
                         fontweight='bold', zorder=21)
 
-    if save_to is not None:
+    if save_to is not None and save_to != '':
         # Create the output folder, if it does not exist
         save_to.replace('\\', '/')
         save_figure(fig, save_to, format)
@@ -291,65 +367,65 @@ def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str=
             args['save_to'] = None
         plot_geo_data(tmp, fig=fig, ax=ax, vmin=vmin, vmax=vmax, zoom=zoom, **args)
 
+    if n_rows != 1 or n_cols != 1:
+        axes_pos = np.around(np.array([ax.get_position().get_points().flatten() for ax in fig.axes if ax.has_data()]).transpose(), decimals=10)
 
-    axes_pos = np.around(np.array([ax.get_position().get_points().flatten() for ax in fig.axes if ax.has_data()]).transpose(), decimals=10)
+        # Get the height and width of axes with data
+        ax_width = axes_pos[2][0] - axes_pos[0][0]
+        ax_height = axes_pos[3][0] - axes_pos[1][0]
 
-    # Get the height and width of axes with data
-    ax_width = axes_pos[2][0] - axes_pos[0][0]
-    ax_height = axes_pos[3][0] - axes_pos[1][0]
+        y0_rows = np.unique(axes_pos[1])
+        x0_cols = np.unique(axes_pos[0])
 
-    y0_rows = np.unique(axes_pos[1])
-    x0_cols = np.unique(axes_pos[0])
+        # rescale and reposition all empty axes
+        for ax in fig.axes:
+            if not ax.has_data():
+                ax_pos = ax.get_position()
+                ax_pos.x0 = x0_cols[np.absolute(x0_cols - ax_pos.x0).argmin()]
+                ax_pos.y0 = y0_rows[np.absolute(y0_rows - ax_pos.y0).argmin()]
+                ax_pos.x1 = ax_pos.x0 + ax_width
+                ax_pos.y1 = ax_pos.y0 + ax_height
+                ax.set_position(ax_pos)
 
-    # rescale and reposition all empty axes
-    for ax in fig.axes:
-        if not ax.has_data():
+
+        # Compute the gap between the rightmost axes and the colorbar
+        x_gap_width_min = 0.025
+        x1_max = axes_pos[2].max()
+        x0_min = axes_pos[0].min()
+
+        x_gap_width = max(x_gap_width_min, (x1_max - x0_min)/len(x0_cols) - ax_width)
+
+
+        # Reposition all subplots vertically
+        max_y1 = 0.95
+        if figure_title:
+            max_y1 -= 0.05  # leave some space for the title
+
+        y_gap_width = 0.025
+        if 'title_axis' in kwargs:
+            y_gap_width += 0.01  # leave some extra space for the axis title
+
+        for ax in fig.axes:
+            ax_col = np.absolute(x0_cols - ax.get_position().x0).argmin()
+            ax_row = np.absolute(y0_rows - ax.get_position().y0).argmin()
             ax_pos = ax.get_position()
-            ax_pos.x0 = x0_cols[np.absolute(x0_cols - ax_pos.x0).argmin()]
-            ax_pos.y0 = y0_rows[np.absolute(y0_rows - ax_pos.y0).argmin()]
+            ax_pos.x0 = x0_min + ax_col*(ax_width + x_gap_width)
             ax_pos.x1 = ax_pos.x0 + ax_width
-            ax_pos.y1 = ax_pos.y0 + ax_height
+
+            ax_pos.y1 = max_y1 - (n_rows-ax_row-1)*(ax_height + y_gap_width)
+            ax_pos.y0 = ax_pos.y1 - ax_height
             ax.set_position(ax_pos)
 
 
-    # Compute the gap between the rightmost axes and the colorbar
-    x_gap_width_min = 0.025
-    x1_max = axes_pos[2].max()
-    x0_min = axes_pos[0].min()
+        # add the colorbar
+        x0_colorbar = x1_max
+        y0_colorbar = max_y1 - (n_rows*(ax_height + y_gap_width) - y_gap_width)
+        y1_colorbar = (n_rows*(ax_height + y_gap_width) - y_gap_width)
 
-    x_gap_width = max(x_gap_width_min, (x1_max - x0_min)/len(x0_cols) - ax_width)
-
-
-    # Reposition all subplots vertically
-    max_y1 = 0.95
-    if figure_title:
-        max_y1 -= 0.05  # leave some space for the title
-
-    y_gap_width = 0.025
-    if 'title_axis' in kwargs:
-        y_gap_width += 0.01  # leave some extra space for the axis title
-
-    for ax in fig.axes:
-        ax_col = np.absolute(x0_cols - ax.get_position().x0).argmin()
-        ax_row = np.absolute(y0_rows - ax.get_position().y0).argmin()
-        ax_pos = ax.get_position()
-        ax_pos.x0 = x0_min + ax_col*(ax_width + x_gap_width)
-        ax_pos.x1 = ax_pos.x0 + ax_width
-
-        ax_pos.y1 = max_y1 - (n_rows-ax_row-1)*(ax_height + y_gap_width)
-        ax_pos.y0 = ax_pos.y1 - ax_height
-        ax.set_position(ax_pos)
-
-
-    # add the colorbar
-    x0_colorbar = x1_max
-    y0_colorbar = max_y1 - (n_rows*(ax_height + y_gap_width) - y_gap_width)
-    y1_colorbar = (n_rows*(ax_height + y_gap_width) - y_gap_width)
-
-    cax = fig.add_axes([x0_colorbar, y0_colorbar, 0.03, y1_colorbar])
-    sm = plt.cm.ScalarMappable(cmap=kwargs['cmap'], norm=plt.Normalize(vmin=vmin, vmax=vmax))
-    sm._A = []
-    cbr = fig.colorbar(sm, cax=cax, label=kwargs['title_axis'])
+        cax = fig.add_axes([x0_colorbar, y0_colorbar, 0.03, y1_colorbar])
+        sm = plt.cm.ScalarMappable(cmap=kwargs['cmap'], norm=plt.Normalize(vmin=vmin, vmax=vmax))
+        sm._A = []
+        cbr = fig.colorbar(sm, cax=cax, label=kwargs['title_axis'])
 
     # add the figure title
     if figure_title:
