@@ -309,6 +309,11 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
                              markersize=zoom*point_data['markersize'],
                              zorder=18, cmap=cmap, legend = not all_numeric)
 
+        if not all_numeric:
+            legend = plt.gca().legend_
+            if legend is not None:
+                legend.set_title(title_axis)
+
         if 'label' in point_data:
             for x, y, label in zip(point_data['geometry'].x, point_data['geometry'].y, point_data['label']):
                 ax.annotate(label, xy=(x, y), xytext=(3, 3), textcoords="offset points", size=zoom*6, alpha=text_alpha, zorder=20)
@@ -399,10 +404,6 @@ def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str=
 
     if 'lat' in df and 'lon' in df:
         fig, axes = plot_geo_data(df, zoom=zoom, **kwargs)
-        if 'title_axis' in kwargs:
-            legend = plt.gca().legend_
-            if legend is not None:
-                legend.set_title(kwargs['title_axis'])
     else:
 
         vmin = df.min().min()
