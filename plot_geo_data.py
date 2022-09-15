@@ -12,18 +12,72 @@ Arguments:
     -h
         Display this help message^^
 
-    -d <datafile>, --datafile <datafile>
+    -f <datafile>, --filename <datafile>
         Default "ExampleData.csv". The filename of the data file that shall be plotted.
+            If you want to specify the location using region names, use the following format:
+                'Region 1', 'Region 2', 'Region 3'
+                    0.2   ,    0.1    ,    0.3
+                    0.3   ,    0.2    ,    0.5
+            If you want labeled circles of 'value'-dependant size and color at specific coordinates:
+                 'lat', 'lon' , 'value', 'label'
+                49.294, 10.663,    1   ,  'P0'
+                49.258, 10.664,    2   ,  'P1'
+                50.380, 11.957,   3.2  ,  'P2'
+            And if you want non labeled circles of 'value'-dependant color at specific coordinates:
+                 'lat', 'lon' , 'value', 'label'
+                49.294, 10.663,  'eins',  'P0'
+                49.258, 10.664,  'zwei',  'P1'
+                50.380, 11.957,  'drei',  'P2'
 
     -a <yourtitle>, --title_axis <yourtitle>
         Default "Please add a title to the colorbar!". The title for the colorbar.
 
-    -t <yourtitle>, --title <yourtitle>
+    -T <yourtitle>, --figure_title <youttitle>
         Optional. The title of the whole figure.
+
+    -t <yourtitle>, --title <yourtitle>
+        Optional. The title of the each subfigure. Can be a semicolon-separated list, like "title 0;title 1"
 
     --cmap <yourcmap>
         Default "RdYlGn". The matplotlib colormap of your choice.
         You can reverse a colormap, by adding a '_r' suffix to a cmap.
+
+    --text_alpha <flaot>
+        Default 0.5. The alpha value of text elements. 0 is invisible.
+
+    --save_to <yourPath>
+        Default 'output/{datafile}'. The folder and filename of the generated image files.
+
+    --format <imageFormat>
+        Default 'png'. The image file format of your choice. Recommended choices are 'png', 'svg' or 'pdf'.
+
+    --crop' <yourChoice>
+        Default "9.9136935; 12.7207591; 48.7730094; 50.6524235".
+            If you pass True or 'data', the map will be cropped to fit the data in datafile.
+            Alternatively you can pass a list of coordinates describing the geo-referenced bounding box in
+            semicolon-separated decimal longitude and latitude values.
+            The bounding box for the European Metropolitan Area Nuremberg (EMN) is "9.9136935, 12.7207591, 48.7730094, 50.6524235"
+            If you pass False, the all data and shapefiles will be plotted (Not recommended!)
+
+    --zoom <float>
+        Default 1. A factor that scales all linewidth, textsizes and cicles. Can be used to finetune those to different map sizes.
+
+    --data_viz <yourChoice>
+        Default 'area'.
+            If you pass 'area', the values from the datafile will be used to color the corresponding regions.
+            If you pass 'circle', instead of coloring the regions a circles will be drawn at the center of the
+            corresponding regions. Their size and color depends on the data.
+            Automatically set to 'circle', if the data has a 'lat' and a 'lon' column.
+
+    --label_counties
+        Default True. Defines whether counties will be labeled or not.
+
+    --add_roads
+        Default False. Defines whether roads will be plotted or not.
+
+    --use_cx
+        Default False. Defines whether labels will be loaded from the provider Stamen using the contextly library.
+
 """
 
 # !/usr/bin/python
@@ -60,7 +114,7 @@ def save_figure(fig:plt.Figure, filename:str, format:str = 'png') -> None:
 def create_coordinate(longitude:float, latitude:float) -> Point:
     return gpd.points_from_xy([longitude], [latitude], crs='EPSG:4326')[0]
 
-def create_bounding_box_from_lon_lat(sw_lon:float, sw_lat:float, ne_lon:float, ne_lat:float) -> Polygon:
+def create_bounding_box_from_lon_lat(sw_lon:float,  ne_lon:float, sw_lat:float, ne_lat:float) -> Polygon:
     return create_bounding_box(create_coordinate(sw_lon, sw_lat), create_coordinate(ne_lon, ne_lat))
 
 def create_bounding_box(sw_point:Point, ne_point:Point) -> Polygon:
@@ -81,6 +135,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
 
     data_copy = data
     coord_specified = 'lat' in data_copy and 'lon' in data_copy
+
     if coord_specified and 'value' not in data_copy:
         data_copy['value'] = 1
 
@@ -88,7 +143,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
         print('No data to plot found')
         return fig, ax
 
-    ax.set_title(title, y=1.05, fontdict={'fontweight': 'bold'})
+    ax.set_title(title, fontdict={'fontweight': 'bold'}, y=1.02)
 
     '''Load the shape files'''
     if add_roads:
@@ -202,7 +257,6 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
         data_df = gpd.GeoDataFrame(data_copy, geometry=gpd.points_from_xy(data_copy['lon'], data_copy['lat'],
                                                                           crs='EPSG:4326')).to_crs(epsg=3857)
 
-        display(data_df)
 
     data_df['has_data'] = data_df['value'].notna()
     data_df['centroids'] = data_df.centroid
@@ -223,7 +277,15 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
 
     if data_viz == 'area':
         ax = data_df[data_df['has_data']].plot(ax=ax, column='value', linewidth=0, zorder=3, legend=False,
-                                                         vmin=vmin, vmax=vmax, cmap=cmap)
+                                                         vmin=vmin, vmax=vmax, cmap=cmap,
+                                               scheme=None, # quantiles, natural_breaks, equal_interval
+                                               missing_kwds={
+                                                   "color": "lightgrey",
+                                                   "edgecolor": "red",
+                                                   "hatch": "///",
+                                                   "label": "Missing values",
+                                               }
+                                               )
     elif data_viz == 'circle':
         ax = data_df[data_df['has_data']].plot(ax=ax, facecolor="none", edgecolor="none", zorder=3)
         point_data = data_df[data_df['has_data']].drop(columns=['geometry']).rename(columns={'centroids': 'geometry'})
@@ -245,7 +307,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
 
         ax = point_data.plot(ax=ax, column='value', edgecolor="black", linewidth=zoom*1,
                              markersize=zoom*point_data['markersize'],
-                             zorder=18, cmap=cmap, legend = ~all_numeric)
+                             zorder=18, cmap=cmap, legend = not all_numeric)
 
         if 'label' in point_data:
             for x, y, label in zip(point_data['geometry'].x, point_data['geometry'].y, point_data['label']):
@@ -263,7 +325,11 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
     if crop == 'data' or crop==True:
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
-    elif isinstance(crop, Polygon):
+    elif isinstance(crop, Polygon) or isinstance(crop, list) or isinstance(crop, set):
+        if isinstance(crop, list) or isinstance(crop, set):
+            crop = create_bounding_box_from_lon_lat(*crop)
+
+        print(f'Cropping to bounding box {crop}')
         '''A bounding box has been passed'''
         wgs84 = pyproj.CRS('EPSG:4326')
         pseudo_mercator = pyproj.CRS('EPSG:3857')
@@ -327,107 +393,118 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
 
 
 def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str='', **kwargs) -> None:
-    vmin = df.min().min()
-    vmax = df.max().max()
-    individual_files = True
     fig=None
-    ax=None
+    axes=[None]*len(df)
+    individual_files = True
 
-    if n_rows != 1 or n_cols != 1:
-        if len(df) != n_rows*n_cols:
-            raise Exception(f'The dimensions of the subplots of {n_rows}x{n_cols} have been passed, but there are {len(df)} rows in the data!')
-        individual_files = False
+    if 'lat' in df and 'lon' in df:
+        fig, axes = plot_geo_data(df, zoom=zoom, **kwargs)
+        if 'title_axis' in kwargs:
+            legend = plt.gca().legend_
+            if legend is not None:
+                legend.set_title(kwargs['title_axis'])
+    else:
 
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 15))
+        vmin = df.min().min()
+        vmax = df.max().max()
+        if n_rows != 1 or n_cols != 1:
+            if len(df) != n_rows*n_cols:
+                raise Exception(f'The dimensions of the subplots of {n_rows}x{n_cols} have been passed, but there are {len(df)} rows in the data!')
+            individual_files = False
 
+            fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 15))
 
-    for index, row in df.iterrows():
-        if not individual_files:
-            ax = axes.flatten()[index]
+        for index, row in df.iterrows():
+            if not individual_files:
+                ax = axes.flatten()[index]
+            else:
+                ax = None
 
-        tmp = pd.DataFrame(row)
-        tmp = tmp.rename(columns={index: 'value'})
-        args = kwargs.copy()
-        if isinstance(args['title'], str):
-            args['title'] = f'{kwargs["title"]} - {index}'
-        else:
-            try:
-                args['title'] = args['title'][index]
-            except IndexError:
-                raise IndexError('The title can be a str or an iterable of the same size as there are number or rows.')
-
-        if individual_files and args['save_to'] is not None:
-            if isinstance(args['save_to'], str):
-                args['save_to'] = f'{kwargs["save_to"]}_{index}'
+            tmp = pd.DataFrame(row)
+            tmp = tmp.rename(columns={index: 'value'})
+            args = kwargs.copy()
+            if isinstance(args['title'], str):
+                args['title'] = f'{kwargs["title"]} - {index}'
             else:
                 try:
-                    args['save_to'] = args['save_to'][index]
+                    args['title'] = args['title'][index]
                 except IndexError:
-                    raise IndexError(
-                        'The filename for the output (save_to) can be a str or an iterable of the same size as there are number or rows.')
-        else:
-            args['save_to'] = None
-        plot_geo_data(tmp, fig=fig, ax=ax, vmin=vmin, vmax=vmax, zoom=zoom, **args)
+                    raise IndexError('The title can be a str or an iterable of the same size as there are number or rows.')
 
-    if n_rows != 1 or n_cols != 1:
-        axes_pos = np.around(np.array([ax.get_position().get_points().flatten() for ax in fig.axes if ax.has_data()]).transpose(), decimals=10)
+            if individual_files and args['save_to'] is not None:
+                if isinstance(args['save_to'], str):
+                    args['save_to'] = f'{kwargs["save_to"]}_{index}'
+                else:
+                    try:
+                        args['save_to'] = args['save_to'][index]
+                    except IndexError:
+                        raise IndexError(
+                            'The filename for the output (save_to) can be a str or an iterable of the same size as there are number or rows.')
+            else:
+                args['save_to'] = None
+            fig, ax = plot_geo_data(tmp, fig=fig, ax=ax, vmin=vmin, vmax=vmax, zoom=zoom, **args)
 
-        # Get the height and width of axes with data
-        ax_width = axes_pos[2][0] - axes_pos[0][0]
-        ax_height = axes_pos[3][0] - axes_pos[1][0]
+        if n_rows != 1 or n_cols != 1:
+            axes_pos = np.around(np.array([ax.get_position().get_points().flatten() for ax in fig.axes if ax.has_data()]).transpose(), decimals=10)
 
-        y0_rows = np.unique(axes_pos[1])
-        x0_cols = np.unique(axes_pos[0])
+            # Get the height and width of axes with data
+            ax_width = axes_pos[2][0] - axes_pos[0][0]
+            ax_height = axes_pos[3][0] - axes_pos[1][0]
 
-        # rescale and reposition all empty axes
-        for ax in fig.axes:
-            if not ax.has_data():
+            y0_rows = np.unique(axes_pos[1])
+            x0_cols = np.unique(axes_pos[0])
+
+            # rescale and reposition all empty axes
+            for ax in fig.axes:
+                if not ax.has_data():
+                    ax_pos = ax.get_position()
+                    ax_pos.x0 = x0_cols[np.absolute(x0_cols - ax_pos.x0).argmin()]
+                    ax_pos.y0 = y0_rows[np.absolute(y0_rows - ax_pos.y0).argmin()]
+                    ax_pos.x1 = ax_pos.x0 + ax_width
+                    ax_pos.y1 = ax_pos.y0 + ax_height
+                    ax.set_position(ax_pos)
+
+
+            # Compute the gap between the rightmost axes and the colorbar
+            x_gap_width_min = 0.025
+            x1_max = axes_pos[2].max()
+            x0_min = axes_pos[0].min()
+
+            x_gap_width = max(x_gap_width_min, (x1_max - x0_min)/len(x0_cols) - ax_width)
+
+
+            # Reposition all subplots vertically
+            max_y1 = 0.95
+            if figure_title:
+                max_y1 -= 0.05  # leave some space for the title
+
+            y_gap_width = 0.025
+            if 'title_axis' in kwargs:
+                y_gap_width += 0.01  # leave some extra space for the axis title
+
+            for ax in fig.axes:
+                ax_col = np.absolute(x0_cols - ax.get_position().x0).argmin()
+                ax_row = np.absolute(y0_rows - ax.get_position().y0).argmin()
                 ax_pos = ax.get_position()
-                ax_pos.x0 = x0_cols[np.absolute(x0_cols - ax_pos.x0).argmin()]
-                ax_pos.y0 = y0_rows[np.absolute(y0_rows - ax_pos.y0).argmin()]
+                ax_pos.x0 = x0_min + ax_col*(ax_width + x_gap_width)
                 ax_pos.x1 = ax_pos.x0 + ax_width
-                ax_pos.y1 = ax_pos.y0 + ax_height
+
+                ax_pos.y1 = max_y1 - (n_rows-ax_row-1)*(ax_height + y_gap_width)
+                ax_pos.y0 = ax_pos.y1 - ax_height
                 ax.set_position(ax_pos)
 
 
-        # Compute the gap between the rightmost axes and the colorbar
-        x_gap_width_min = 0.025
-        x1_max = axes_pos[2].max()
-        x0_min = axes_pos[0].min()
+            # add the colorbar
+            x0_colorbar = x1_max
+            if n_cols == 1:
+                x0_colorbar += x_gap_width
+            y0_colorbar = max_y1 - (n_rows*(ax_height + y_gap_width) - y_gap_width)
+            y1_colorbar = (n_rows*(ax_height + y_gap_width) - y_gap_width)
 
-        x_gap_width = max(x_gap_width_min, (x1_max - x0_min)/len(x0_cols) - ax_width)
-
-
-        # Reposition all subplots vertically
-        max_y1 = 0.95
-        if figure_title:
-            max_y1 -= 0.05  # leave some space for the title
-
-        y_gap_width = 0.025
-        if 'title_axis' in kwargs:
-            y_gap_width += 0.01  # leave some extra space for the axis title
-
-        for ax in fig.axes:
-            ax_col = np.absolute(x0_cols - ax.get_position().x0).argmin()
-            ax_row = np.absolute(y0_rows - ax.get_position().y0).argmin()
-            ax_pos = ax.get_position()
-            ax_pos.x0 = x0_min + ax_col*(ax_width + x_gap_width)
-            ax_pos.x1 = ax_pos.x0 + ax_width
-
-            ax_pos.y1 = max_y1 - (n_rows-ax_row-1)*(ax_height + y_gap_width)
-            ax_pos.y0 = ax_pos.y1 - ax_height
-            ax.set_position(ax_pos)
-
-
-        # add the colorbar
-        x0_colorbar = x1_max
-        y0_colorbar = max_y1 - (n_rows*(ax_height + y_gap_width) - y_gap_width)
-        y1_colorbar = (n_rows*(ax_height + y_gap_width) - y_gap_width)
-
-        cax = fig.add_axes([x0_colorbar, y0_colorbar, 0.03, y1_colorbar])
-        sm = plt.cm.ScalarMappable(cmap=kwargs['cmap'], norm=plt.Normalize(vmin=vmin, vmax=vmax))
-        sm._A = []
-        cbr = fig.colorbar(sm, cax=cax, label=kwargs['title_axis'])
+            cax = fig.add_axes([x0_colorbar, y0_colorbar, 0.03, y1_colorbar])
+            sm = plt.cm.ScalarMappable(cmap=kwargs['cmap'], norm=plt.Normalize(vmin=vmin, vmax=vmax))
+            sm._A = []
+            cbr = fig.colorbar(sm, cax=cax, label=kwargs['title_axis'])
 
     # add the figure title
     if figure_title:
@@ -445,38 +522,165 @@ def process_file(filename: str, **kwargs) -> None:
     print(df)
     process_data(df, **kwargs)
 
-def main(argv):
+def example_color_regions():
+    """
+    This method plots the data from ExampleData.csv as colored regions onto a map.
+    """
+    _argv = [
+        '-f', 'ExampleData.csv',
+        '-a', 'Please add a title to the colorbar!',
+        '-t' ,'Random example data',
+        '--cmap', 'RdYlGn',
+        '--text_alpha', '0.5',
+        '--label_counties',
+        '--crop', 'True',
+        '--save_to', 'output/ExampleData',
+        '--format', 'png'
+        ]
+    main(_argv)
+
+def example_colored_circles_in_regions_single_figure():
+    """
+        This method plots the data from ExampleData.csv as colored circles onto a map using a single figure with two rows.
+    """
+    _argv = [
+        '-f', 'ExampleData.csv',
+        '-a', 'Please add a title to the colorbar!',
+        '-T', 'Random example data, but as circles',
+        '-t', 'Axis title 0;Axis title 1',
+        '--label_counties',
+        '--save_to', 'output/ExampleData_circles',
+        '--data_viz', 'circle',
+        '--n_rows', '2'
+    ]
+
+    main(_argv)
+
+def example_color_regions_single_figure():
+    """
+        This method plots the data from ExampleData.csv as colored regions onto a map using only a single figure with two columns.
+    """
+    _argv = [
+        '-f', 'ExampleData.csv',
+        '-a', 'Please add a title to the colorbar!',
+        '-T', 'Random example data',
+        '-t', 'Axis title 0;Axis title 1',
+        '--label_counties',
+        '--n_cols', '2'
+    ]
+    main(_argv)
+
+def example_points():
+    """
+        This method plots the data from ExampleData_points_1.csv as points onto a map.
+    """
+    _argv = [
+        '-f', 'ExampleData_points_1.csv',
+        '-T', 'Random points',
+        '--save_to', 'output/Random_points_1',
+        '--add_roads'
+    ]
+    main(_argv)
+
+def example_points_with_values():
+    """
+        This method plots the data from ExampleData_points_2.csv as colored points onto a map.
+    """
+    _argv = [
+        '-f', 'ExampleData_points_2.csv',
+        '-T', 'Random points with values',
+        '-a', 'Value',
+        '--save_to', 'output/Random_points_2',
+        '--add_roads'
+    ]
+    main(_argv)
+
+def example_points_with_category_values():
+    """
+        This method plots the data from ExampleData_points_3.csv as colored points onto a map.
+    """
+    _argv = [
+        '-f', 'ExampleData_points_3.csv',
+        '-T', 'Random points with category values',
+        '-a', 'Categories',
+        '--save_to', 'output/Random_points_3',
+        '--add_roads'
+    ]
+    main(_argv)
+
+def example_points_with_category_values_and_labels():
+    """
+        This method plots the data from ExampleData_points_4.csv as colored points onto a map.
+    """
+    _argv = [
+        '-f', 'ExampleData_points_4.csv',
+        '-T', 'Random points with category values and labels',
+        '-a', 'Categories',
+        '--save_to', 'output/Random_points_4',
+        '--add_roads'
+    ]
+    main(_argv)
+
+def __extract_argv__(argv):
     _args = dict(
         filename='ExampleData.csv',
         title_axis='Please add a title to the colorbar!',
+        figure_title='',
         title='Random example data',
         cmap='RdYlGn',
         text_alpha=0.5,
-        label_counties=True,
-        crop=True,
+        label_counties=False,
+        crop=[9.9136935, 12.7207591, 48.7730094, 50.6524235], # bbox of European Metropolitan Area Nuremberg
         add_roads=False,
         use_cx=False,
         save_to=None,
-        format='png'
+        format='png',
+        data_viz='area'
     )
 
+    def raise_error(opt, arg):
+        raise ValueError(f'Warning! The value {arg} for the {opt} argument is not supported. See -h for possible values.')
+
     try:
-        opts, args = getopt.getopt(argv, '"hf:a:t:o:',
-                                   ['filename=', 'title_axis=', 'title=', 'cmap=', 'text_alpha=', 'save_to=', 'format=', 'label_counties', 'add_roads', 'use_cx'])
-    except getopt.GetoptError:
+        opts, args = getopt.getopt(argv, '"hf:a:t:T:o:',
+                                   [
+                                       'filename=',
+                                       'title_axis=',
+                                       'title=',
+                                       'figure_title=',
+                                       'cmap=',
+                                       'text_alpha=',
+                                       'save_to=',
+                                       'format=',
+                                       'crop=',
+                                       'zoom=',
+                                       'data_viz=',
+                                       'n_rows=',
+                                       'n_cols=',
+                                       'label_counties',
+                                       'add_roads',
+                                       'use_cx'
+                                   ])
+    except getopt.GetoptError as e:
+        print(e)
+        print('Refer to the help:')
         print(__doc__)
         sys.exit(2)
-
     for opt, arg in opts:
         if opt == '-h':
             print(__doc__)
             sys.exit()
-        elif opt in ("-i", "--filename"):
+        elif opt in ("-f", "--filename"):
             _args['filename'] = arg
+        elif opt in ("-T", "--figure_title"):
+            _args['figure_title'] = arg
         elif opt in ("-a", "--title_axis"):
             _args['title_axis'] = arg
         elif opt in ("-t", "--title"):
-            _args['title'] = arg
+            if ';' in arg:
+                _args['title'] = arg.split(';')
+            else:
+                _args['title'] = arg
         elif opt in ("--cmap"):
             _args['cmap'] = arg
         elif opt in ("--format"):
@@ -485,23 +689,55 @@ def main(argv):
             _args['save_to'] = arg
         elif opt in ("--text_alpha"):
             _args['text_alpha'] = float(arg)
+        elif opt in ("--zoom"):
+            _args['zoom'] = float(arg)
+        elif opt in ("--n_rows"):
+            _args['n_rows'] = int(arg)
+        elif opt in ("--n_cols"):
+            _args['n_cols'] = int(arg)
         elif opt in ("--label_counties"):
             _args['label_counties'] = True
         elif opt in ("--add_roads"):
             _args['add_roads'] = True
         elif opt in ("--use_cx"):
             _args['use_cx'] = True
+        elif opt in ("--crop"):
+            if ';' in arg:
+                # expecting a string with decimal lon/lat values "[lon_min; lon_max; lat_min; lat_max]"
+                bbox = arg.replace(' ', '').split(';')
+                for i in range(len(bbox)):
+                    bbox[i] = float(bbox[i])
+                _args['crop'] = bbox
+            elif arg in ['True', 'true', '1', 'data']:
+                _args['crop'] = 'data'
+            elif arg in ['False', 'false', '0']:
+                _args['crop'] = False
+            else:
+                raise_error(opt, arg)
+        elif opt in ("--data_viz"):
+            if arg in ['area', 'circle']:
+                _args['data_viz'] = arg
+            else:
+                raise_error(opt, arg)
+
 
     if _args['save_to'] is None:
         _args['save_to'] = f'output/{_args["filename"][:_args["filename"].rfind(".")]}'
 
+    return _args
+
+def main(argv):
+    _args = __extract_argv__(argv)
+
     print(f'The data file is {_args["filename"]}')
-    print(f'The title is {_args["title"]}')
+    if _args["figure_title"] != '':
+        print(f'The figure title is {_args["figure_title"]}')
+    print(f'The titles is {_args["title"]}')
     print(f'The axis title is {_args["title_axis"]}')
     print(f'The colormap is {_args["cmap"]}')
 
     print(f'\nPlotting data from the csv file and saving each line to an individual {_args["format"]}-file')
-    process_data(**_args)
+    process_file(**_args)
     print('All saved.')
 
 
