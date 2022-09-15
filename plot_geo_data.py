@@ -94,11 +94,6 @@ from shapely.geometry import Point, Polygon
 from shapely.ops import transform
 import pyproj
 
-# Some libraries to render the svg to PDF and afterwards to PNG
-from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPDF
-from pdf2image import convert_from_path
-
 def save_figure(fig:plt.Figure, filename:str, format:str = 'png') -> None:
     # Create the output folder, if it does not exist
     path = filename[:filename.rfind('/')]
