@@ -1,4 +1,14 @@
-### colormap_geo_plotter
+#### Installation
+
+Since this project main requirement is the geopandas library
+[geopandas](https://geopandas.org/en/stable/index.html). I requires several binaries that are more or less complicated to install using pip or even build from source.
+Following the advice from [their installation page](https://geopandas.org/en/stable/getting_started/install.html) it is best installed using [Anaconda](https://www.anaconda.com/products/distribution).
+
+To install all requirements best use the following command line in the Anaconda terminal:
+```
+conda install -c conda-forge regex geopandas
+```
+#### Description
 
 This script can plot numeric data from a simple csv table into a map consisting of several layers of shape files.
 Those shape files can be found in the geo_data folder.
