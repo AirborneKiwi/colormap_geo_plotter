@@ -392,7 +392,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
 
 
 
-def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str='', **kwargs) -> None:
+def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, zero_middled=False, figure_title:str='', **kwargs) -> None:
     fig=None
     axes=[None]*len(df)
     individual_files = True
@@ -401,8 +401,20 @@ def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str=
         fig, axes = plot_geo_data(df, zoom=zoom, **kwargs)
     else:
 
-        vmin = df.min().min()
-        vmax = df.max().max()
+        if 'vmin' in kwargs:
+            vmin = kwargs['vmin']
+        else:
+            vmin = df.min().min()
+
+        if 'vmax' in kwargs:
+            vmax = kwargs['vmax']
+        else:
+            vmax = df.max().max()
+
+        if zero_middled:
+            vmax = max(abs(vmin), abs(vmax))
+            vmin = -vmax
+
         if n_rows != 1 or n_cols != 1:
             if len(df) != n_rows*n_cols:
                 raise Exception(f'The dimensions of the subplots of {n_rows}x{n_cols} have been passed, but there are {len(df)} rows in the data!')
@@ -419,6 +431,9 @@ def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str=
             tmp = pd.DataFrame(row)
             tmp = tmp.rename(columns={index: 'value'})
             args = kwargs.copy()
+            args['vmin'] = vmin
+            args['vmax'] = vmax
+
             if isinstance(args['title'], str):
                 args['title'] = f'{kwargs["title"]} - {index}'
             else:
@@ -438,7 +453,7 @@ def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, figure_title:str=
                             'The filename for the output (save_to) can be a str or an iterable of the same size as there are number or rows.')
             else:
                 args['save_to'] = None
-            fig, ax = plot_geo_data(tmp, fig=fig, ax=ax, vmin=vmin, vmax=vmax, zoom=zoom, **args)
+            fig, ax = plot_geo_data(tmp, fig=fig, ax=ax, zoom=zoom, **args)
 
         if n_rows != 1 or n_cols != 1:
             axes_pos = np.around(np.array([ax.get_position().get_points().flatten() for ax in fig.axes if ax.has_data()]).transpose(), decimals=10)
