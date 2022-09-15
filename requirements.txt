@@ -1,5 +1,2 @@
-pandas
-numpy
 regex
-matplotlib
 geopandas
