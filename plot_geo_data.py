@@ -637,7 +637,7 @@ def __extract_argv__(argv):
         filename='ExampleData.csv',
         title_axis='Please add a title to the colorbar!',
         figure_title='',
-        title='Random example data',
+        title='',
         cmap='RdYlGn',
         text_alpha=0.5,
         label_counties=False,
