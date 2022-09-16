@@ -45,7 +45,7 @@ Arguments:
         Default "Please add a title to the colorbar!". The title for the colorbar.
     
     -T <yourtitle>, --figure_title <yourtitle>
-        Optional. The title of the whole figure
+        Optional. The title of the whole figure. Might be ignored, if you only have a single (sub)plot!
     
     -t <yourtitle>, --title <yourtitle>
         Optional. The title or titles for each subplot/axis. Can be a semicolon-separated list of titles:
