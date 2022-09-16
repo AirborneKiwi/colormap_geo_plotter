@@ -36,10 +36,10 @@ Arguments:
                 49.258, 10.664,    2   ,  'P1'
                 50.380, 11.957,   3.2  ,  'P2'
             And if you want non labeled circles of 'value'-dependant color at specific coordinates:
-                 'lat', 'lon' , 'value', 'label'
-                49.294, 10.663,  'eins',  'P0'
-                49.258, 10.664,  'zwei',  'P1'
-                50.380, 11.957,  'drei',  'P2'
+                 'lat', 'lon' , 'value'
+                49.294, 10.663, 'eins'
+                49.258, 10.664, 'zwei'
+                50.380, 11.957, 'drei'
 
     -a <yourtitle>, --title_axis <yourtitle>
         Default "Please add a title to the colorbar!". The title for the colorbar.
