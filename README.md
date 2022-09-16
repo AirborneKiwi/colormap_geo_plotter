@@ -55,7 +55,7 @@ Arguments:
         Default "RdYlGn". The matplotlib colormap of your choice.
         You can reverse a colormap, by adding a '_r' suffix to a cmap.
 
-    --text_alpha <flaot>
+    --text_alpha <float>
         Default 0.5. The alpha value of text elements. 0 is invisible.
 
     --save_to <yourPath>
@@ -64,7 +64,7 @@ Arguments:
     --format <imageFormat>
         Default 'png'. The image file format of your choice. Recommended choices are 'png', 'svg' or 'pdf'.
 
-    --crop' <yourChoice>
+    --crop <yourChoice>
         Default "9.9136935, 12.7207591, 48.7730094, 50.6524235".
             If you pass True or 'data', the map will be cropped to fit the data in datafile.
             Alternatively you can pass a list of coordinates describing the geo-referenced bounding box in
