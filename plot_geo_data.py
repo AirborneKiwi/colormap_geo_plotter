@@ -78,7 +78,38 @@ Arguments:
     --use_cx
         Default False. Defines whether labels will be loaded from the provider Stamen using the contextly library.
 
+    --title_size <yourChoice>
+        Default "medium". Defines the font size of the title of the sub-figures.
+            Valid font size is numeric values or "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "larger", "smaller", "None".
+
+    --cbar_label_size <yourChoice>
+        Default "medium". Defines the font size of the title of the colorbar.
+            Valid font size is numeric values or "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "larger", "smaller", "None".
+
+    --cbar_tick_size <yourChoice>
+        Default "medium". Defines the font size of the ticks of the colorbar.
+            Valid font size is numeric values or "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "larger", "smaller", "None".
+
+    --fig_title_size <yourChoice>
+        Default "medium". Defines the font size of the figure title.
+            Valid font size is numeric values or "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "larger", "smaller", "None".
+
+    --markersize <float>
+        The size of markers, when using data_viz="circle" and there are no values to scale the marker.
+
+    --markersize_min <float>
+        The minimum size of markers, when using data_viz="circle" and there are values to scale the marker.
+
+    --markersize_max <float>
+        The maximum size of markers, when using data_viz="circle" and there are values to scale the marker.
+
+    --no_value_labels
+        Default False. Add no value labels for each datapoint.
+
+    --label_size <float>
+        The font size of the value labels.
 """
+
 
 # !/usr/bin/python
 import sys
@@ -138,7 +169,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
         print('No data to plot found')
         return fig, ax
 
-    ax.set_title(title, fontdict={'fontweight': 'bold'}, y=1.02)
+    ax.set_title(title, fontdict=dict(fontweight='bold', size=(kwargs['title_size'] if 'title_size' in kwargs else 'medium')), y=1.02)
 
     '''Load the shape files'''
     if add_roads:
@@ -167,7 +198,12 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
         def is_city_marked(name):
             return re.match(r'.*\bStadt\b.*', name) or re.match(r'.*\bKreisstadt\b.*', name)
 
-        for name in data_copy.index:
+        if 'loc' not in data_copy:
+            data_copy['loc'] = data_copy.index.values
+
+        locations = data_copy['loc'].values
+
+        for name in locations:
             if is_county_marked(name):
                 marking = 'County'
                 break
@@ -186,9 +222,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
             return 'City' if is_city_marked(name) else 'County'
 
         # data_copy['area_type'] = data_copy['name'].apply(lambda s: get_type(s, marking))
-        data_copy['area_type'] = [get_type(name, marking) for name in
-                                  data_copy.index]  # data_copy['name'].apply(lambda s: get_type(s, marking))
-
+        data_copy['area_type'] = [get_type(name, marking) for name in locations]  # data_copy['name'].apply(lambda s: get_type(s, marking))
 
         def match_to_krs(s):
             def get_name_matches(s_krs, name, area_type):
@@ -219,7 +253,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
                 return score
 
             area_type = s['area_type']
-            name = s.name
+            name = s['loc']
 
             geo_data_krs['score'] = geo_data_krs.apply(lambda s_krs: get_name_matches(s_krs, name, area_type), axis=1)
 
@@ -238,7 +272,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
                 if len(match) > 1:
                     raise Exception(
                         f'No clear match for {area_type} "{name}" found. Conflicting entries are {list(zip(match["GEN"].values, match["BEZ"].values))}')
-
+            #print(f'{name} matched to {match.at[match.index[0], "BEZ"]} {match.at[match.index[0], "GEN"]}')
             return match.index[0]
 
         data_copy.index = data_copy.apply(match_to_krs, axis=1)
@@ -258,15 +292,16 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
 
     '''Plot the data'''
     if vmin is None:
-        if not coord_specified:
-            vmin = data_df[data_df['has_data']].min().min()
-        else:
+        if 'value' in data_df:
             vmin = data_df[data_df['has_data']]['value'].min()
-    if vmax is None:
-        if not coord_specified:
-            vmax = data_df[data_df['has_data']].max().max()
         else:
+            vmin = data_df[data_df['has_data']].min().min()
+
+    if vmax is None:
+        if 'value' in data_df:
             vmax = data_df[data_df['has_data']]['value'].max()
+        else:
+            vmax = data_df[data_df['has_data']].max().max()
 
     add_colorbar = own_fig
 
@@ -294,7 +329,7 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
             point_data = point_data.sort_values(by='scaled_value', ascending=0)
 
             markersize_min = kwargs['markersize_min'] if 'markersize_min' in kwargs else 100
-            markersize_max = kwargs['markersize_max'] if 'markersize_min' in kwargs else 5000
+            markersize_max = kwargs['markersize_max'] if 'markersize_max' in kwargs else 5000
             point_data['markersize'] = markersize_min+(markersize_max-markersize_min)*point_data['scaled_value']
         else:
             point_data['markersize'] = kwargs['markersize'] if 'markersize' in kwargs else 100
@@ -311,14 +346,37 @@ def plot_geo_data(data: pd.DataFrame, title_axis: str, data_viz:str = 'area', ti
 
         if 'label' in point_data:
             for x, y, label in zip(point_data['geometry'].x, point_data['geometry'].y, point_data['label']):
-                ax.annotate(label, xy=(x, y), xytext=(3, 3), textcoords="offset points", size=zoom*6, alpha=text_alpha, zorder=20)
+                ax.annotate(label, xy=(x, y), xytext=(3, 3), textcoords="offset points", size=zoom * (kwargs['label_size'] if 'label_size'  in kwargs else 12), alpha=text_alpha, zorder=20)
         pass
+
+    add_value_labels = True if 'no_value_labels' not in kwargs else False
+    if add_value_labels:
+        data_df_with_data = data_df[data_df['has_data']]
+        for centroid, value in zip(data_df_with_data['geometry'].centroid, data_df_with_data['value']):
+            color = 'black'
+            zero_middled = False
+            if zero_middled:
+                if value > vmin + 0.8*vmax or  value < vmin + 0.8*vmax:
+                    color = 'white'
+            else:
+                if value > vmin + 0.8 * (vmax - vmin):
+                    color = 'white'
+
+            ax.annotate(f'{int(value)}',
+                        xy=(centroid.x, centroid.y), xytext=(0, 0),
+                        textcoords="offset points", va='center', ha='center',
+                        color=color,
+                        size=zoom * (kwargs['label_size'] if 'label_size' in kwargs else 12), alpha=1,
+                        zorder=25)
 
     if own_fig and add_colorbar:
         cax = fig.add_axes([1, 0.1, 0.03, 0.8])
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
         sm._A = []
-        cbr = fig.colorbar(sm, cax=cax, label=title_axis)
+        cbr = fig.colorbar(sm, cax=cax)
+        cbr.ax.tick_params(labelsize=(kwargs['cbar_tick_size'] if 'cbar_tick_size' in kwargs else 'medium'))
+        cbr.set_label(label=title_axis, size=(kwargs['cbar_label_size'] if 'cbar_label_size' in kwargs else 'medium'))
+
 
     xlim = None
     ylim = None
@@ -513,13 +571,19 @@ def process_data(df: pd.DataFrame, n_rows=1, n_cols=1, zoom=1, zero_middled=Fals
             y1_colorbar = (n_rows*(ax_height + y_gap_width) - y_gap_width)
 
             cax = fig.add_axes([x0_colorbar, y0_colorbar, 0.03, y1_colorbar])
+
+            if 'cmap' not in kwargs:
+                kwargs['cmap'] = 'RdYlGn'
+
             sm = plt.cm.ScalarMappable(cmap=kwargs['cmap'], norm=plt.Normalize(vmin=vmin, vmax=vmax))
             sm._A = []
-            cbr = fig.colorbar(sm, cax=cax, label=kwargs['title_axis'])
+            cbr = fig.colorbar(sm, cax=cax)
+            cbr.ax.tick_params(labelsize=(kwargs['cbar_tick_size'] if 'cbar_tick_size' in kwargs else 'medium'))
+            cbr.set_label(label=kwargs['title_axis'], size=(kwargs['cbar_label_size'] if 'cbar_label_size' in kwargs else 'medium'))
 
     # add the figure title
     if figure_title:
-        fig.suptitle(figure_title, y=0.95, fontweight='bold', fontsize=16)
+        fig.suptitle(figure_title, y=0.95, fontweight='bold', fontsize=(kwargs['fig_title_size'] if 'fig_title_size' in kwargs else 16))
 
     # save to a file
     if not individual_files and kwargs['save_to'] is not None:
@@ -649,6 +713,7 @@ def __extract_argv__(argv):
         data_viz='area'
     )
 
+
     def raise_error(opt, arg):
         raise ValueError(f'Warning! The value {arg} for the {opt} argument is not supported. See -h for possible values.')
 
@@ -657,8 +722,12 @@ def __extract_argv__(argv):
                                    [
                                        'filename=',
                                        'title_axis=',
+                                       'cbar_label_size=',
+                                       'cbar_tick_size=',
                                        'title=',
+                                       'title_size=',
                                        'figure_title=',
+                                       'fig_title_size=',
                                        'cmap=',
                                        'text_alpha=',
                                        'save_to=',
@@ -670,7 +739,12 @@ def __extract_argv__(argv):
                                        'n_cols=',
                                        'label_counties',
                                        'add_roads',
-                                       'use_cx'
+                                       'use_cx',
+                                       'markersize=',
+                                       'markersize_min=',
+                                       'markersize_max=',
+                                       'no_value_labels',
+                                       'label_size='
                                    ])
     except getopt.GetoptError as e:
         print(e)
@@ -685,13 +759,33 @@ def __extract_argv__(argv):
             _args['filename'] = arg
         elif opt in ("-T", "--figure_title"):
             _args['figure_title'] = arg
+        elif opt in ("--fig_title_size"):
+            if arg.isnumeric():
+                _args['fig_title_size'] = float(arg)
+            else:
+                _args['fig_title_size'] = arg
         elif opt in ("-a", "--title_axis"):
             _args['title_axis'] = arg
+        elif opt in ("--cbar_label_size"):
+            if arg.isnumeric():
+                _args['cbar_label_size'] = float(arg)
+            else:
+                _args['cbar_label_size'] = arg
+        elif opt in ("--cbar_tick_size"):
+            if arg.isnumeric():
+                _args['cbar_tick_size'] = float(arg)
+            else:
+                _args['cbar_tick_size'] = arg
         elif opt in ("-t", "--title"):
             if ';' in arg:
                 _args['title'] = arg.split(';')
             else:
                 _args['title'] = arg
+        elif opt in ("--title_size"):
+            if arg.isnumeric():
+                _args['title_size'] = float(arg)
+            else:
+                _args['title_size'] = arg
         elif opt in ("--cmap"):
             _args['cmap'] = arg
         elif opt in ("--format"):
@@ -708,6 +802,16 @@ def __extract_argv__(argv):
             _args['n_cols'] = int(arg)
         elif opt in ("--label_counties"):
             _args['label_counties'] = True
+        elif opt in ('markersize='):
+            _args['markersize'] = float(arg)
+        elif opt in ('markersize_min='):
+            _args['markersize_min'] = float(arg)
+        elif opt in ('markersize_max='):
+            _args['markersize_max'] = float(arg)
+        elif opt in ('no_value_labels'):
+            _args['no_value_labels'] = False
+        elif opt in ('label_size='):
+            _args['label_size'] = float(arg)
         elif opt in ("--add_roads"):
             _args['add_roads'] = True
         elif opt in ("--use_cx"):
